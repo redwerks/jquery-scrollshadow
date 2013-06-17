@@ -22,41 +22,50 @@
  */
 ( function( $, undefined ) {
 
-	function onscroll( e, options ) {
-		var shadowLength = Math.min( options.max, Math.max( 0, e.target.scrollTop ) );
-		shadowLength += 'px';
-		$( e.target ).css( 'box-shadow', [ 0, shadowLength, shadowLength, '-' + shadowLength, options.color, 'inset' ].join( ' ' ) );
-	}
+  function onscroll( target, options ) {
+    var topShadowLength    = Math.min( options.max, Math.max( 0, target.scrollTop ) ) + 'px',
+        bottomShadowLength = Math.min( options.max, Math.max( 0, target.scrollHeight - target.scrollTop - target.offsetHeight ) ) + 'px',
 
-	$.fn.scrollshadow = function( options ) {
-		if ( !options ) options = {};
-		if ( typeof options === 'string' ) options = { selector: options };
-		options = $.extend( {
-			selector: '*',
-			color: '#aaa',
-			max: 20
-		}, options );
-		if ( document.addEventListener ) {
-			// If the browser implements addEventListener use traversing events to capture the event
-			this.each( function() {
-				this.addEventListener( 'scroll', function( event ) {
-					var e = $.event.fix( event || window.event );
-					if ( !$( e.target ).is( options.selector ) ) {
-						return;
-					}
-					return onscroll.call( this, e, options );
-				}, true );
-			} );
-		} else {
-			// In browsers like IE fall back to a method that doesn't work dynamically
-			this.find( options.selector ).scroll( function( e ) {
-				return onscroll.call( this, e, options );
-			} );
-		}
-		return this;
-	};
+        topShadow     = [ 0, topShadowLength, topShadowLength, '-' + topShadowLength, options.color, 'inset' ].join( ' ' ),
+        bottomShadow  = [ 0, '-' + bottomShadowLength, bottomShadowLength, '-' + bottomShadowLength, options.color, 'inset' ].join( ' ' ),
+        shadows       = options['bottomShadow'] === true ? [ topShadow, bottomShadow ] : [ topShadow ] ;
 
-	// @todo Implement a cssHook to make box-shadow work on all vendor prefixes
-	// $.cssHooks['boxShadow'] = 
+    $( target ).css( 'box-shadow', shadows.join( ', ' ) );
+  }
+
+  $.fn.scrollshadow = function( selector, options ) {
+    if ( !options ) options = {};
+
+    if ( typeof selector === 'string' ) options['selector'] = selector;
+
+    options = $.extend( {
+      selector: '*',
+      color:    '#aaa',
+      max:      20
+    }, options );
+
+    if ( document.addEventListener ) {
+      // If the browser implements addEventListener use traversing events to capture the event
+      this.each( function() {
+        this.addEventListener( 'scroll', function( event ) {
+          var e = $.event.fix( event || window.event );
+          if ( !$( e.target ).is( options.selector ) ) {
+            return;
+          }
+          return onscroll.call( this, e.target, options );
+        }, true );
+      } );
+    } else {
+      // In browsers like IE fall back to a method that doesn't work dynamically
+      this.find( options.selector ).scroll( function( e ) {
+        return onscroll.call( this, e.target, options );
+      } );
+    }
+
+    // Fire event once to draw bottom shadow on load
+    onscroll.call( this, this.find( options.selector )[0], options );
+
+    return this;
+  };
 
 } )( jQuery );
